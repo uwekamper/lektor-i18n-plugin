@@ -247,10 +247,8 @@ class I18NPlugin(Plugin):
                     contents=FileContents(fn)
                 except IOError:
                     pass # next
-            try:
-                text = contents.as_text()
-            except:
-                import pudb; pu.db
+
+            text = contents.as_text()
             fields = source.datamodel.fields
             sections = list(tokenize(text.splitlines())) # ('sectionname',[list of section texts])
             flowblocks = source.pad.db.flowblocks
@@ -261,41 +259,42 @@ class I18NPlugin(Plugin):
                 with open(translated_filename,"wb") as f:
                     count_lines_block = 0 # counting the number of lines of the current block
                     is_content = False
-                    for line in contents.open(encoding='utf-8').readlines():#text.splitlines():
-                        stripped_line = line.strip()
-                        if not stripped_line: # empty line
-                            f.write(b'\n')
-                            continue
-                        if _line_is_dashes(stripped_line) or _block2_re.match(stripped_line): # line like "---*" or a new block tag
-                            count_lines_block=0
-                            is_content = False
-                            f.write( ("%s"%line).encode('utf-8') )
-                        else:
-                            count_lines_block+=1
-                            if count_lines_block==1 and not is_content: # handle first line, while not in content
-                                if _command_re.match(stripped_line):
-                                    key,value=stripped_line.split(':',1)
-                                    value=value.strip()
-                                    if value:
-                                        if six.PY3:
-                                            f.write( ("%s: %s\n" % ( key, translator.gettext(value))).encode('utf-8') )
-                                        else:
-                                            f.write( "%s: %s\n" % ( key.encode('utf-8'), translator.ugettext(value).encode('utf-8')  ))
-                                    else:
-                                        if six.PY3:
-                                            f.write( ("%s:\n" % key).encode('utf-8') )
-                                        else:
-                                            f.write( "%s:\n" % key.encode('utf-8') )
-                                        
+                    with contents.open(encoding='utf-8') as contents_file:
+                        for line in contents_file.readlines():#text.splitlines():
+                            stripped_line = line.strip()
+                            if not stripped_line: # empty line
+                                f.write(b'\n')
+                                continue
+                            if _line_is_dashes(stripped_line) or _block2_re.match(stripped_line): # line like "---*" or a new block tag
+                                count_lines_block=0
+                                is_content = False
+                                f.write( ("%s"%line).encode('utf-8') )
                             else:
-                                is_content=True
-                        if is_content:
-                            if six.PY2:
-                                translated_stripline = translator.ugettext(stripped_line) # translate the stripped version
-                            else:
-                                translated_stripline = translator.gettext(stripped_line) # translate the stripped version
-                            translation = line.replace(stripped_line, translated_stripline, 1) # and re-inject the stripped translation into original line (not stripped)
-                            f.write( translation.encode('utf-8') )
+                                count_lines_block+=1
+                                if count_lines_block==1 and not is_content: # handle first line, while not in content
+                                    if _command_re.match(stripped_line):
+                                        key,value=stripped_line.split(':',1)
+                                        value=value.strip()
+                                        if value:
+                                            if six.PY3:
+                                                f.write( ("%s: %s\n" % ( key, translator.gettext(value))).encode('utf-8') )
+                                            else:
+                                                f.write( "%s: %s\n" % ( key.encode('utf-8'), translator.ugettext(value).encode('utf-8')  ))
+                                        else:
+                                            if six.PY3:
+                                                f.write( ("%s:\n" % key).encode('utf-8') )
+                                            else:
+                                                f.write( "%s:\n" % key.encode('utf-8') )
+
+                                else:
+                                    is_content=True
+                            if is_content:
+                                if six.PY2:
+                                    translated_stripline = translator.ugettext(stripped_line) # translate the stripped version
+                                else:
+                                    translated_stripline = translator.gettext(stripped_line) # translate the stripped version
+                                translation = line.replace(stripped_line, translated_stripline, 1) # and re-inject the stripped translation into original line (not stripped)
+                                f.write( translation.encode('utf-8') )
 
 
     def on_after_build(self, builder, build_state, source, prog):
