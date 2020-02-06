@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import sys
+import traceback
+
 from lektor.pluginsystem import Plugin
 from lektor.db import Page
 from lektor.metaformat import tokenize
@@ -92,7 +95,13 @@ class Translations(object):
         pybabel=locate_executable('pybabel')
         cmdline=[pybabel, 'extract', '-F', 'babel.cfg', "-o", to_filename, "./"]
         reporter.report_debug_info('pybabel cmd line', cmdline)
-        portable_popen(cmdline).wait()
+        try:
+            portable_popen(cmdline).wait()
+        except TypeError as err:
+            traceback.print_exc(file=sys.stderr)
+            print(err)
+
+
 
 translations = Translations() # let's have a singleton
 
