@@ -165,6 +165,9 @@ def _line_is_dashes(line):
 class I18NPlugin(Plugin):
     name = u'i18n'
     description = u'Internationalisation helper'
+    
+    def flag_is_present(self, extra_flags):
+        return bool(extra_flags.get('i18n'))
 
     def translate_tag(self, s, *args, **kwargs):
         s=s.strip()
@@ -201,6 +204,11 @@ class I18NPlugin(Plugin):
         self.enabled = self.get_config().get('enable', 'true') in ('true','True','1')
         if not self.enabled:
             reporter.report_generic('I18N plugin disabled in configs/i18n.ini')
+            return
+        
+        if not self.flag_is_present():
+            eporter.report_generic('I18N plugin disabled, please use flag to enable (-f i18n)')
+            return
 
         self.i18npath = self.get_config().get('i18npath', 'i18n')
         self.url_prefix = self.get_config().get('url_prefix', 'http://localhost/')
@@ -249,7 +257,9 @@ class I18NPlugin(Plugin):
         """Before building a page, eventualy produce all its alternatives (=translated pages)
         using the gettext translations available."""
         # if isinstance(source,Page) and source.alt==PRIMARY_ALT:
-        if self.enabled and isinstance(source,Page) and source.alt in (PRIMARY_ALT, self.content_language):
+        if self.enabled and self.flag_is_present() \
+                and isinstance(source,Page) \
+                and source.alt in (PRIMARY_ALT, self.content_language):
             contents = None
             for fn in source.iter_source_filenames():
                 try:
@@ -307,7 +317,7 @@ class I18NPlugin(Plugin):
 
 
     def on_after_build(self, builder, build_state, source, prog):
-        if self.enabled and isinstance(source,Page):
+        if self.enabled and self.flag_is_present() and isinstance(source,Page):
             try:
                 text = source.contents.as_text()
             except IOError:
@@ -319,7 +329,7 @@ class I18NPlugin(Plugin):
 
 
     def on_before_build_all(self, builder, **extra):
-        if self.enabled:
+        if self.enabled and self.flag_is_present():
             reporter.report_generic("i18n activated, with main language %s"% self.content_language )
             templates_pot_filename = join(tempfile.gettempdir(), 'templates.pot')
             reporter.report_generic("Parsing templates for i18n into %s"% relpath(templates_pot_filename,builder.env.root_path) )
