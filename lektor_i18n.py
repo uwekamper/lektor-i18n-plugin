@@ -198,7 +198,11 @@ class I18NPlugin(Plugin):
                 return item
         return None
 
-    def on_setup_env(self):
+    def on_server_spawn(self, **extra):
+        if not self.flag_is_present(extra):
+            return
+
+    def on_setup_env(self, **extra):
         """Setup `env` for the plugin"""
         # Read configuration
         self.enabled = self.get_config().get('enable', 'true') in ('true','True','1')
@@ -206,8 +210,8 @@ class I18NPlugin(Plugin):
             reporter.report_generic('I18N plugin disabled in configs/i18n.ini')
             return
         
-        if not self.flag_is_present():
-            eporter.report_generic('I18N plugin disabled, please use flag to enable (-f i18n)')
+        if not self.flag_is_present(extra):
+            reporter.report_generic('I18N plugin disabled, please use flag to enable (-f i18n)')
             return
 
         self.i18npath = self.get_config().get('i18npath', 'i18n')
@@ -253,11 +257,11 @@ class I18NPlugin(Plugin):
 
 
 
-    def on_before_build(self, builder, build_state, source, prog):
+    def on_before_build(self, builder, build_state, source, prog, **extra):
         """Before building a page, eventualy produce all its alternatives (=translated pages)
         using the gettext translations available."""
         # if isinstance(source,Page) and source.alt==PRIMARY_ALT:
-        if self.enabled and self.flag_is_present() \
+        if self.enabled and self.flag_is_present(extra) \
                 and isinstance(source,Page) \
                 and source.alt in (PRIMARY_ALT, self.content_language):
             contents = None
@@ -316,8 +320,8 @@ class I18NPlugin(Plugin):
                                 f.write( translation.encode('utf-8') )
 
 
-    def on_after_build(self, builder, build_state, source, prog):
-        if self.enabled and self.flag_is_present() and isinstance(source,Page):
+    def on_after_build(self, builder, build_state, source, prog, **extra):
+        if self.enabled and self.flag_is_present(extra) and isinstance(source,Page):
             try:
                 text = source.contents.as_text()
             except IOError:
@@ -329,7 +333,7 @@ class I18NPlugin(Plugin):
 
 
     def on_before_build_all(self, builder, **extra):
-        if self.enabled and self.flag_is_present():
+        if self.enabled and self.flag_is_present(extra):
             reporter.report_generic("i18n activated, with main language %s"% self.content_language )
             templates_pot_filename = join(tempfile.gettempdir(), 'templates.pot')
             reporter.report_generic("Parsing templates for i18n into %s"% relpath(templates_pot_filename,builder.env.root_path) )
@@ -340,7 +344,7 @@ class I18NPlugin(Plugin):
         """Once the build process is over :
         - write the translation template `contents.pot` on the filesystem,
         - write all translation contents+<language>.po files """
-        if self.enabled:
+        if self.enabled and self.flag_is_present(extra):
             contents_pot_filename = join(builder.env.root_path, self.i18npath, 'contents.pot')
             templates_pot_filename = join(tempfile.gettempdir(), 'templates.pot')
             translations.write_pot(contents_pot_filename, self.content_language)
