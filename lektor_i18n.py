@@ -209,10 +209,6 @@ class I18NPlugin(Plugin):
         if not self.enabled:
             reporter.report_generic('I18N plugin disabled in configs/i18n.ini')
             return
-        
-        if not self.flag_is_present(extra):
-            reporter.report_generic('I18N plugin disabled, please use flag to enable (-f i18n)')
-            return
 
         self.i18npath = self.get_config().get('i18npath', 'i18n')
         self.url_prefix = self.get_config().get('url_prefix', 'http://localhost/')
@@ -257,11 +253,11 @@ class I18NPlugin(Plugin):
 
 
 
-    def on_before_build(self, builder, build_state, source, prog, **extra):
+    def on_before_build(self, builder, build_state, source, prog):
         """Before building a page, eventualy produce all its alternatives (=translated pages)
         using the gettext translations available."""
         # if isinstance(source,Page) and source.alt==PRIMARY_ALT:
-        if self.enabled and self.flag_is_present(extra) \
+        if self.enabled and self.flag_is_present(builder.extra_flags) \
                 and isinstance(source,Page) \
                 and source.alt in (PRIMARY_ALT, self.content_language):
             contents = None
@@ -320,8 +316,9 @@ class I18NPlugin(Plugin):
                                 f.write( translation.encode('utf-8') )
 
 
-    def on_after_build(self, builder, build_state, source, prog, **extra):
-        if self.enabled and self.flag_is_present(extra) and isinstance(source,Page):
+    def on_after_build(self, builder, build_state, source, prog):
+        if self.enabled and self.flag_is_present(builder.extra_flags) \
+                and isinstance(source,Page):
             try:
                 text = source.contents.as_text()
             except IOError:
@@ -332,27 +329,27 @@ class I18NPlugin(Plugin):
                 self.process_node(fields, sections, source, source.datamodel.id, builder.env.root_path)
 
 
-    def on_before_build_all(self, builder, **extra):
-        if self.enabled and self.flag_is_present(extra):
+    def on_before_build_all(self, builder):
+        if self.enabled and self.flag_is_present(builder.extra_flags):
             reporter.report_generic("i18n activated, with main language %s"% self.content_language )
             templates_pot_filename = join(tempfile.gettempdir(), 'templates.pot')
             reporter.report_generic("Parsing templates for i18n into %s"% relpath(templates_pot_filename,builder.env.root_path) )
             translations.parse_templates(templates_pot_filename)
 
 
-    def on_after_build_all(self, builder, **extra):
+    def on_after_build_all(self, builder):
         """Once the build process is over :
         - write the translation template `contents.pot` on the filesystem,
         - write all translation contents+<language>.po files """
-        if self.enabled and self.flag_is_present(extra):
+        if self.enabled and self.flag_is_present(builder.extra_flags):
             contents_pot_filename = join(builder.env.root_path, self.i18npath, 'contents.pot')
             templates_pot_filename = join(tempfile.gettempdir(), 'templates.pot')
             translations.write_pot(contents_pot_filename, self.content_language)
             reporter.report_generic("%s generated"%relpath(contents_pot_filename, builder.env.root_path))
+
             if exists(templates_pot_filename):
                 translations.merge_pot([contents_pot_filename, templates_pot_filename], contents_pot_filename)
                 reporter.report_generic("%s merged into %s"% (relpath(templates_pot_filename,builder.env.root_path),relpath(contents_pot_filename,builder.env.root_path)) )
-
 
             for language in self.translations_languages:
                 po_file=POFile(language, self.i18npath)
