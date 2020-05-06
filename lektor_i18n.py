@@ -274,8 +274,11 @@ class I18NPlugin(Plugin):
 
             for language in self.translations_languages:
                 translator = gettext.translation("contents", join(self.i18npath,'_compiled'), languages=[language], fallback = True)
-                translated_filename=join(dirname(source.source_filename), "contents+%s.lr"%language)
-                with open(translated_filename,"wb") as f:
+                translated_filename = join(dirname(source.source_filename), "contents+%s.lr"%language)
+                if language == 'de':
+                    continue
+
+                with open(translated_filename, "wb") as f:
                     count_lines_block = 0 # counting the number of lines of the current block
                     is_content = False
                     with contents.open(encoding='utf-8') as contents_file:
