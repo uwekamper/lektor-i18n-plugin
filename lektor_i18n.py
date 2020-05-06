@@ -258,7 +258,7 @@ class I18NPlugin(Plugin):
         using the gettext translations available."""
         # if isinstance(source,Page) and source.alt==PRIMARY_ALT:
         if self.enabled and self.flag_is_present(builder.extra_flags) \
-                and isinstance(source,Page) \
+                and isinstance(source, Page) \
                 and source.alt in (PRIMARY_ALT, self.content_language):
             contents = None
             for fn in source.iter_source_filenames():
@@ -275,8 +275,8 @@ class I18NPlugin(Plugin):
             for language in self.translations_languages:
                 translator = gettext.translation("contents", join(self.i18npath,'_compiled'), languages=[language], fallback = True)
                 translated_filename = join(dirname(source.source_filename), "contents+%s.lr"%language)
-                if language == 'de':
-                    continue
+                #if language == 'de':
+                #    continue
 
                 with open(translated_filename, "wb") as f:
                     count_lines_block = 0 # counting the number of lines of the current block
